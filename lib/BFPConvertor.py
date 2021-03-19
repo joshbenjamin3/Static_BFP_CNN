@@ -42,7 +42,7 @@ class BFPConvertor:
             if isinstance(mod, nn.Linear):
                 fc_weight.append(mod.weight.data.cuda())
                 fc_bias.append(mod.bias.data.cuda())
-        return fc_weight, fc_bias              
+        return fc_weight, fc_bias
 
     def collect_conv_tensor(self, model, conv_isbias):
         conv_weight = []
@@ -52,8 +52,8 @@ class BFPConvertor:
                 conv_weight.append(mod.weight.data.cuda())
                 if (conv_isbias):
                     conv_bias.append(mod.bias.data.cuda())
-        return conv_weight, conv_bias             
-    
+        return conv_weight, conv_bias
+
     def fused_bn(self, conv_weight, conv_bias, bn_weight, bn_bias, bn_mean, bn_var, bn_eps):
         if (len(conv_weight) != len(bn_weight)):
             logging.info("%d conv, %d bn, not equal"%(len(conv_weight), len(bn_weight)))
@@ -104,12 +104,12 @@ class BFPConvertor:
                 #bmod.weight.data = bfp_quant_weight_KL(conv_weight[k], 8, 8, group)
                 if (is_kl):
                     #bmod.weight.data = conv_weight[k]
-                    #bmod.bias.data = conv_bias[k]                   
+                    #bmod.bias.data = conv_bias[k]
                     bmod.weight.data, opt_exp_list = find_exp_weight(conv_weight[k], self.mantisa_bit, self.exp_bit, group, eps=0.000000001, num_bins=32)
                     #opt_exp_list = opt_exp_list.int().cpu().data.tolist()
                     weight_exp_list.append(opt_exp_list)
                     if (conv_isbias or (len(bn_weight) != 0)):
-                        bmod.bias.data = bfp_quant_bias_KL(conv_bias[k], 16) # set mantissa as 2*(10-2)=16, assume in hardware we can 16-bit fraction      
+                        bmod.bias.data = bfp_quant_bias_KL(conv_bias[k], 16) # set mantissa as 2*(10-2)=16, assume in hardware we can 16-bit fraction
                 else:
                     bmod.weight.data, max_exp_list = bfp_quant_weight_KL(conv_weight[k], self.mantisa_bit, self.exp_bit, group)
                     #max_exp_list = max_exp_list.int().cpu().data.tolist()
@@ -119,11 +119,11 @@ class BFPConvertor:
                 #bmod.weight.data = conv_weight[k]
                 #bmod.bias.data = conv_bias[k]
                 k+=1
-            # FC layer          
+            # FC layer
             if isinstance(bmod, nn.Linear):
                 if (is_kl):
                     #bmod.weight.data = fc_weight[j]
-                    #bmod.bias.data  = fc_bias[j]                    
+                    #bmod.bias.data  = fc_bias[j]
                     orig_shape = fc_weight[j].shape
                     fc_weight[j] = torch.reshape(fc_weight[j], (orig_shape[0], orig_shape[1], 1, 1))
                     fc_weight[j], opt_exp_list = bfp_quant_weight_KL(fc_weight[j], self.mantisa_bit, self.exp_bit, -1) #quantize the weight of fc as whole
@@ -138,10 +138,10 @@ class BFPConvertor:
                     #max_exp_list = max_exp_list.int().cpu().data.tolist()
                     weight_exp_list.append(max_exp_list)
                     bmod.weight.data = torch.reshape(fc_weight[j], orig_shape)
-                    bmod.bias.data  = bfp_quant_bias_KL(fc_bias[j], 16) 
+                    bmod.bias.data  = bfp_quant_bias_KL(fc_bias[j], 16)
                 #bmod.weight.data = fc_weight[j]
                 #bmod.bias.data  = fc_bias[j]
-                j+=1              
+                j+=1
         end = time.time()
         logging.info("It took %f seconds for transfer learning" % (end-start))
 
@@ -177,7 +177,7 @@ class BFPConvertor_3D:
             if isinstance(mod, nn.Linear):
                 fc_weight.append(mod.weight.data.cuda())
                 fc_bias.append(mod.bias.data.cuda())
-        return fc_weight, fc_bias              
+        return fc_weight, fc_bias
 
     def collect_conv_tensor(self, model, conv_isbias):
         conv_weight = []
@@ -189,7 +189,7 @@ class BFPConvertor_3D:
                 if (conv_isbias):
                     print ("Conv with bias")
                     conv_bias.append(mod.bias.data.cuda())
-        return conv_weight, conv_bias             
+        return conv_weight, conv_bias
 
 
     def fused_bn3d(self, conv_weight, conv_bias, bn_weight, bn_bias, bn_mean, bn_var, bn_eps):
@@ -241,12 +241,12 @@ class BFPConvertor_3D:
                     '''
                     bmod.weight.data = conv_weight[k]
                     opt_exp_list = None
-                    bmod.bias.data = conv_bias[k]                   
+                    bmod.bias.data = conv_bias[k]
                     '''
                     bmod.weight.data, opt_exp_list = find_exp_weight_3d(conv_weight[k], self.mantisa_bit, self.exp_bit, group, eps=0.000000001, num_bins=32, exp_act=exp_act)
                     weight_exp_list.append(opt_exp_list)
                     if (conv_isbias or (len(bn_weight) != 0)):
-                        bmod.bias.data = bfp_quant_bias_KL(conv_bias[k], 16) # set mantissa as 2*(10-2)=16, assume in hardware we can 16-bit fraction      
+                        bmod.bias.data = bfp_quant_bias_KL(conv_bias[k], 16) # set mantissa as 2*(10-2)=16, assume in hardware we can 16-bit fraction
                 else:
                     bmod.weight.data, max_exp_list = bfp_quant_weight_KL(conv_weight[k], self.mantisa_bit, self.exp_bit, group)
                     #max_exp_list = max_exp_list.int().cpu().data.tolist()
@@ -256,12 +256,12 @@ class BFPConvertor_3D:
                 #bmod.weight.data = conv_weight[k]
                 #bmod.bias.data = conv_bias[k]
                 k+=1
-            # FC layer          
+            # FC layer
             if isinstance(bmod, nn.Linear):
                 if (is_kl):
                     '''
                     bmod.weight.data = fc_weight[j]
-                    bmod.bias.data  = fc_bias[j] 
+                    bmod.bias.data  = fc_bias[j]
                     '''
                     orig_shape = fc_weight[j].shape
                     fc_weight[j] = torch.reshape(fc_weight[j], (orig_shape[0], orig_shape[1], 1, 1))
@@ -277,10 +277,10 @@ class BFPConvertor_3D:
                     #max_exp_list = max_exp_list.int().cpu().data.tolist()
                     weight_exp_list.append(max_exp_list)
                     bmod.weight.data = torch.reshape(fc_weight[j], orig_shape)
-                    bmod.bias.data  = bfp_quant_bias_KL(fc_bias[j], 16) 
+                    bmod.bias.data  = bfp_quant_bias_KL(fc_bias[j], 16)
                 #bmod.weight.data = fc_weight[j]
                 #bmod.bias.data  = fc_bias[j]
-                j+=1              
+                j+=1
         end = time.time()
         logging.info("It took %f seconds for transfer learning" % (end-start))
 
