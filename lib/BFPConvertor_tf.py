@@ -15,7 +15,7 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 
 # Tensorflow
-import torch
+import tensorflow as tf
 
 class BFPConvertor:
 
