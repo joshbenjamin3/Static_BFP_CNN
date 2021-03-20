@@ -68,10 +68,10 @@ class BFPConvertor:
             if (isbias):
                 b = conv_bias[i]
             else:
-                b = mean.new_zeros(mean.shape)
+                b = mean.new_zeros(tf.shape(mean))
                 conv_bias.append(b)
             #print ("beta shape:", beta.shape, " var_sqrt shape:", var_sqrt.shape, "conv shape", conv_wtensor.shape)
-            conv_weight[i] = conv_wtensor * (beta / var_sqrt).reshape([conv_wtensor.shape[0], 1, 1, 1])
+            conv_weight[i] = conv_wtensor * (beta / var_sqrt).reshape([tf.shape(conv_wtensor)[0], 1, 1, 1])
             b = (b - mean)/var_sqrt * beta + gamma
             conv_bias[i] = b
         return conv_weight, conv_bias
@@ -121,7 +121,7 @@ class BFPConvertor:
                 if (is_kl):
                     #bmod.weight.data = fc_weight[j]
                     #bmod.bias.data  = fc_bias[j]
-                    orig_shape = fc_weight[j].shape
+                    orig_shape = tf.shape(fc_weight[j])
                     fc_weight[j] = tf.reshape(fc_weight[j], (orig_shape[0], orig_shape[1], 1, 1))
                     fc_weight[j], opt_exp_list = bfp_quant_weight_KL(fc_weight[j], self.mantisa_bit, self.exp_bit, -1) #quantize the weight of fc as whole
                     #opt_exp_list = opt_exp_list.int().cpu().data.tolist()
@@ -129,7 +129,7 @@ class BFPConvertor:
                     bmod.weight.data = tf.reshape(fc_weight[j], orig_shape)
                     bmod.bias.data  = bfp_quant_bias_KL(fc_bias[j], 16)
                 else:
-                    orig_shape = fc_weight[j].shape
+                    orig_shape = tf.shape(fc_weight[j])
                     fc_weight[j] = tf.reshape(fc_weight[j], (orig_shape[0], orig_shape[1], 1, 1))
                     fc_weight[j], max_exp_list = bfp_quant_weight_KL(fc_weight[j], self.mantisa_bit, self.exp_bit, -1) #quantize the weight of fc as whole
                     #max_exp_list = max_exp_list.int().cpu().data.tolist()
@@ -203,13 +203,13 @@ class BFPConvertor_3D:
             var_sqrt = torch.sqrt(bn_var[i] + bn_eps[i])
             beta = bn_weight[i]
             gamma = bn_bias[i]
-            print ("conv shape:", conv_wtensor.shape, " beta shape:", beta.shape, " is_bias", isbias)
+            print ("conv shape:", tf.shape(conv_wtensor)), " beta shape:", tf.shape(beta), " is_bias", isbias)
             if (isbias):
                 b = conv_bias[i]
             else:
-                b = mean.new_zeros(mean.shape)
+                b = mean.new_zeros(tf.shape(mean))
                 conv_bias.append(b)
-            #print ("beta shape:", beta.shape, " var_sqrt shape:", var_sqrt.shape, "conv shape", conv_wtensor.shape)
+            #print ("beta shape:", tf.shape(beta), " var_sqrt shape:", tf.shape(var_sqrt), "conv shape", tf.shape(conv_wtensor))
             conv_weight[i] = conv_wtensor * (beta / var_sqrt).reshape([conv_wtensor.shape[0], 1, 1, 1, 1])
             b = (b - mean)/var_sqrt * beta + gamma
             conv_bias[i] = b
@@ -260,7 +260,7 @@ class BFPConvertor_3D:
                     bmod.weight.data = fc_weight[j]
                     bmod.bias.data  = fc_bias[j]
                     '''
-                    orig_shape = fc_weight[j].shape
+                    orig_shape = tf.shape(fc_weight[j])
                     fc_weight[j] = tf.reshape(fc_weight[j], (orig_shape[0], orig_shape[1], 1, 1))
                     fc_weight[j], opt_exp_list = bfp_quant_weight_KL(fc_weight[j], self.mantisa_bit, self.exp_bit, -1) #quantize the weight of fc as whole
                     #opt_exp_list = opt_exp_list.int().cpu().data.tolist()
@@ -268,7 +268,7 @@ class BFPConvertor_3D:
                     bmod.weight.data = tf.reshape(fc_weight[j], orig_shape)
                     bmod.bias.data  = bfp_quant_bias_KL(fc_bias[j], 16)
                 else:
-                    orig_shape = fc_weight[j].shape
+                    orig_shape = tf.shape(fc_weight[j])
                     fc_weight[j] = tf.reshape(fc_weight[j], (orig_shape[0], orig_shape[1], 1, 1))
                     fc_weight[j], max_exp_list = bfp_quant_weight_KL(fc_weight[j], self.mantisa_bit, self.exp_bit, -1) #quantize the weight of fc as whole
                     #max_exp_list = max_exp_list.int().cpu().data.tolist()
