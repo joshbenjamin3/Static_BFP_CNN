@@ -35,8 +35,8 @@ class BFPConvertor:
     def collect_fc_tensor(self, model):
         fc_weight = []
         fc_bias = []
-        for mod in model.modules():
-            if isinstance(mod, nn.Linear):
+        for mod in model.modules(): #.modules
+            if isinstance(mod, tf.keras.layers.Dense): #nn.Linear
                 fc_weight.append(mod.weight.data.cuda())
                 fc_bias.append(mod.bias.data.cuda())
         return fc_weight, fc_bias

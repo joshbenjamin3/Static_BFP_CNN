@@ -22,7 +22,7 @@ def transform_fc_online(tensor, exponent, mantissa, chnl_group):
     # Quantize the activation tensor along channel dimension
     # Here we require the input tensor has the shape: [batch, channel]
     # opt_exp_list: the shared exponent list for offline quantization
-    shp = tensor.shape
+    shp = tf.shape(tensor)
     #print ("shape1:", shp[1], " opt_exp_list:", len(opt_exp_list))
 
     if (chnl_group == -1):
