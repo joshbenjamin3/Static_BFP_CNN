@@ -13,9 +13,6 @@ from Utils import bfp_quantize, to_exponent_mantissa_width
 import math
 import time
 
-# PyTorch
-import torch
-
 # Tensorflow
 import tensorflow as tf
 
