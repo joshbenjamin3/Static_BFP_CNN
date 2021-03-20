@@ -7,15 +7,9 @@ import time
 import logging
 logger = logging.getLogger(__name__)
 
-# Pytorch
-import torch
-import torch.nn as nn
-import torchvision
-import torchvision.transforms as transforms
-import torchvision.datasets as datasets
-
 # Tensorflow
 import tensorflow as tf
+import tensorflow.nn as nn
 
 class BFPConvertor:
 
