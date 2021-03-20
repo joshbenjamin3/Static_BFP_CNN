@@ -6,7 +6,7 @@ from models import inceptionv4
 #from models import bfp_modules
 
 # The Basic Library
-import argparse 
+import argparse
 import os
 import logging
 import numpy as np
@@ -42,7 +42,7 @@ modules_map = {  "BatchNorm2d" : nn.BatchNorm2d,
 }
 
 # Perform the Block Floting Quantization(BFP) on given model
-def bfp_quant(model_name, dataset_dir, num_classes, gpus, mantisa_bit, exp_bit, batch_size=1, 
+def bfp_quant(model_name, dataset_dir, num_classes, gpus, mantisa_bit, exp_bit, batch_size=1,
                 num_bins=8001, eps=0.0001, num_workers=2, num_examples=10, std=None, mean=None,
                 resize=256, crop=224, exp_act=None, bfp_act_chnl=1, bfp_weight_chnl=1, bfp_quant=1,
                 target_module_list=None, act_bins_factor=3, fc_bins_factor=4, is_online=0):
@@ -85,7 +85,7 @@ def bfp_quant(model_name, dataset_dir, num_classes, gpus, mantisa_bit, exp_bit, 
     #model = nn.DataParallel(model)
     model.cuda()
     model.eval()
-    
+
 
     # Collect the intermediate result while running number of examples
     logging.info("Collecting the statistics while running image examples....")
@@ -96,13 +96,13 @@ def bfp_quant(model_name, dataset_dir, num_classes, gpus, mantisa_bit, exp_bit, 
             outputs = model(images)
             #print(lables)
             _, predicted = torch.max(outputs.data, 1)
-            predicted = predicted.cpu() # needs to verify if this line can be deleted  
+            predicted = predicted.cpu() # needs to verify if this line can be deleted
             # Collect the input data
             image_shape = images.shape
-            images_statistc = torch.reshape(images, 
+            images_statistc = torch.reshape(images,
                                     (image_shape[0], image_shape[1], image_shape[2]*image_shape[3]))
             break
-    
+
     # Deternmining the optimal exponent of activation and
     # Constructing the distribution for tensorboardX visualization
     logging.info("Determining the optimal exponent by minimizing the KL divergence....")
@@ -119,14 +119,14 @@ def bfp_quant(model_name, dataset_dir, num_classes, gpus, mantisa_bit, exp_bit, 
     for i, intern_output in enumerate(intern_outputs):
         #print ("No.", i, " ", intern_output.out_features.shape)
         # ploting the distribution
-        #writer.add_histogram("conv%d" % (i), 
+        #writer.add_histogram("conv%d" % (i),
         #                intern_output.out_features.cpu().data.numpy(), bins='auto')
         #Deternmining the optimal exponent by minimizing the KL_Divergence in channel-wise manner
         if (isinstance(intern_output.m, nn.Conv2d) or isinstance(intern_output.m, nn.BatchNorm2d)):
             intern_shape = intern_output.out_features.shape
             #print (intern_shape, "No.", i)
             # assmue internal activation has shape: (batch, channel, height, width)
-            
+
             if ((model_name=="resnet50") and (i in sc_layer_num)):
                 #print ("Before:", intern_shape[1])
                 intern_features1 = intern_output.out_features
@@ -135,7 +135,7 @@ def bfp_quant(model_name, dataset_dir, num_classes, gpus, mantisa_bit, exp_bit, 
                 intern_features = torch.reshape(intern_features, (2*intern_shape[0], intern_shape[1],
                                                 intern_shape[2]*intern_shape[3]))
                 #print (intern_features.shape)
-                opt_exp, max_exp = Utils.find_exp_act(intern_features, mantisa_bit, exp_bit, 
+                opt_exp, max_exp = Utils.find_exp_act(intern_features, mantisa_bit, exp_bit,
                                                 group = bfp_act_chnl, eps=eps, bins_factor=act_bins_factor)
                 opt_exp_act_list.append(opt_exp)
                 max_exp_act_list.append(max_exp)
@@ -147,14 +147,14 @@ def bfp_quant(model_name, dataset_dir, num_classes, gpus, mantisa_bit, exp_bit, 
                 intern_features = torch.reshape(intern_features, (2*intern_shape[0], intern_shape[1],
                                                 intern_shape[2]*intern_shape[3]))
                 #print (intern_features.shape)
-                opt_exp, max_exp = Utils.find_exp_act(intern_features, mantisa_bit, exp_bit, 
+                opt_exp, max_exp = Utils.find_exp_act(intern_features, mantisa_bit, exp_bit,
                                                 group = bfp_act_chnl, eps=eps, bins_factor=act_bins_factor)
                 #print ("Current shape", np.shape(opt_exp), " No.", i)
                 #print ("Previous shape", np.shape(opt_exp_act_list[i]), " No.", i-1)
                 opt_exp_act_list.append(opt_exp)
                 max_exp_act_list.append(max_exp)
                 opt_exp_act_list[i]=(opt_exp) #Starting from 1
-                max_exp_act_list[i]=(max_exp) 
+                max_exp_act_list[i]=(max_exp)
             elif ((model_name=="mobilenetv2") and (i in mobilev2_sc_layer_num)):
                 intern_features1 = intern_output.out_features
                 intern_features2 = intern_outputs[i-3].out_features
@@ -162,14 +162,14 @@ def bfp_quant(model_name, dataset_dir, num_classes, gpus, mantisa_bit, exp_bit, 
                 intern_features = torch.reshape(intern_features, (2*intern_shape[0], intern_shape[1],
                                                 intern_shape[2]*intern_shape[3]))
                 #print (intern_features.shape)
-                opt_exp, max_exp = Utils.find_exp_act(intern_features, mantisa_bit, exp_bit, 
+                opt_exp, max_exp = Utils.find_exp_act(intern_features, mantisa_bit, exp_bit,
                                                 group = bfp_act_chnl, eps=eps, bins_factor=act_bins_factor)
                 opt_exp_act_list.append(opt_exp) ##changed
                 max_exp_act_list.append(max_exp)
             else:
-                intern_features = torch.reshape(intern_output.out_features, 
+                intern_features = torch.reshape(intern_output.out_features,
                                 (intern_shape[0], intern_shape[1], intern_shape[2]*intern_shape[3]))
-                opt_exp, max_exp = Utils.find_exp_act(intern_features, mantisa_bit, exp_bit, 
+                opt_exp, max_exp = Utils.find_exp_act(intern_features, mantisa_bit, exp_bit,
                                                 group = bfp_act_chnl, eps=eps, bins_factor=act_bins_factor)
                 opt_exp_act_list.append(opt_exp) ##changed
                 max_exp_act_list.append(max_exp)
@@ -182,29 +182,29 @@ def bfp_quant(model_name, dataset_dir, num_classes, gpus, mantisa_bit, exp_bit, 
             max_exp_act_list.append(max_exp)
         else:
             intern_shape = intern_output.in_features[0].shape
-            intern_features = torch.reshape(intern_output.in_features[0], 
+            intern_features = torch.reshape(intern_output.in_features[0],
                                 (intern_shape[0], intern_shape[1], intern_shape[2]*intern_shape[3]))
-            opt_exp, max_exp = Utils.find_exp_act(intern_features, mantisa_bit, exp_bit, 
+            opt_exp, max_exp = Utils.find_exp_act(intern_features, mantisa_bit, exp_bit,
                                                 group = bfp_act_chnl, eps=eps, bins_factor=act_bins_factor)
             opt_exp_act_list.append(opt_exp)
             max_exp_act_list.append(max_exp)
-            
+
         #logging.info("The internal shape: %s" % ((str)(intern_output.out_features.shape)))
     end = time.time()
     logging.info("It took %f second to determine the optimal shared exponent for each block." % ((float)(end-start)))
     logging.info("The shape of collect exponents: %s" % ((str)(np.shape(opt_exp_act_list))))
 
     # Building a BFP model by insert BFPAct and BFPWeiht based on opt_exp_act_list
-    torch.cuda.empty_cache() 
+    torch.cuda.empty_cache()
     if (exp_act=='kl'):
         exp_act_list = opt_exp_act_list
     else:
         exp_act_list = max_exp_act_list
     if (is_online == 1):
         model_name = "br_" + model_name
-    bfp_model, weight_exp_list = model_factory.get_network(model_name, pretrained=True, bfp=(bfp_quant==1), group=bfp_weight_chnl, mantisa_bit=mantisa_bit, 
+    bfp_model, weight_exp_list = model_factory.get_network(model_name, pretrained=True, bfp=(bfp_quant==1), group=bfp_weight_chnl, mantisa_bit=mantisa_bit,
                 exp_bit=exp_bit, opt_exp_act_list=exp_act_list)
-    
+
     '''
     print ("Test, length of weight list", len(weight_exp_list))
     for i, weight_exp in enumerate(weight_exp_list):
@@ -228,7 +228,7 @@ def bfp_quant(model_name, dataset_dir, num_classes, gpus, mantisa_bit, exp_bit, 
                 assert (cur_shift <= 16), "Exceed the maximal shift bits"
                 max_shift = max_shift if (cur_shift < max_shift) else cur_shift
         print ("Max shift:", max_shift)
-    sys.exit() 
+    sys.exit()
     '''
 
     # Runing on dataset to test accuracy
@@ -237,7 +237,7 @@ def bfp_quant(model_name, dataset_dir, num_classes, gpus, mantisa_bit, exp_bit, 
     #model.cuda()
     #model.eval()
 
-    #torch.cuda.empty_cache() 
+    #torch.cuda.empty_cache()
     logging.info("Evaluation Block Floating Point quantization....")
     correct = 0
     total = 0
@@ -258,16 +258,16 @@ def bfp_quant(model_name, dataset_dir, num_classes, gpus, mantisa_bit, exp_bit, 
             #if (total > 2000):
             #    break
     logging.info("Total: %d, Accuracy: %f " % (total, float(correct / total)))
-    logging.info("Floating conv weight and fc(act and weight), act bins_factor is %d,fc bins_factor is %d, exp_opt for act is %s, act group is %d"%(act_bins_factor, fc_bins_factor, exp_act, bfp_act_chnl))    
+    logging.info("Floating conv weight and fc(act and weight), act bins_factor is %d,fc bins_factor is %d, exp_opt for act is %s, act group is %d"%(act_bins_factor, fc_bins_factor, exp_act, bfp_act_chnl))
     writer.close()
-    
+
 
 
 if __name__ == '__main__':
     # Let's allow the user to pass the filename as an argument
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--model_name", default="resnet34", type=str, required=True, 
+    parser.add_argument("--model_name", default="resnet34", type=str, required=True,
                         help="Select the model for bfp quant now only support one of {resnet34,resnet50,resnet101,inceptionv4, mobilenetv2}")
     parser.add_argument("--dataset_dir", default="/dataset/", type=str, required=True,
                         help="Dataset to evaluate the bfp_quantied model. Pls use absolute path point to the dataset")
@@ -292,7 +292,7 @@ if __name__ == '__main__':
     parser.add_argument("--act_bins_factor", default=3, type=int, help="The bins_factor for constructing act histogram")
     parser.add_argument("--fc_bins_factor", default=3, type=int, help="The bins_factor for constructing act histogram")
     parser.add_argument("--is_online", default=0, type=int, help="Use online BFP quantization for benchmark")
-    
+
 
     args = parser.parse_args()
 
@@ -317,13 +317,9 @@ if __name__ == '__main__':
         target_module_list.append(modules_map[hook])
 
 
-    bfp_quant(model_name = args.model_name, dataset_dir = args.dataset_dir, num_classes = args.num_classes, gpus = gpus, 
+    bfp_quant(model_name = args.model_name, dataset_dir = args.dataset_dir, num_classes = args.num_classes, gpus = gpus,
         mantisa_bit = args.mantisa_bit, exp_bit = args.exp_bit, num_bins = args.num_bins, eps = args.eps,
         batch_size = args.batch_size, num_workers = args.num_workers, num_examples = args.num_examples, std=std, mean=mean,
-        resize=args.resize, crop=args.crop, exp_act=args.exp_act, bfp_act_chnl=args.bfp_act_chnl, 
+        resize=args.resize, crop=args.crop, exp_act=args.exp_act, bfp_act_chnl=args.bfp_act_chnl,
         bfp_weight_chnl=args.bfp_weight_chnl, bfp_quant=args.bfp_quant, target_module_list=target_module_list,
         act_bins_factor=args.act_bins_factor, fc_bins_factor=args.fc_bins_factor, is_online=args.is_online)
-
-
-
-
