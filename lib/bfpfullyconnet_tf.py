@@ -27,7 +27,7 @@ def transform_fc_online(tensor, exponent, mantissa, chnl_group):
     # opt_exp_list: the shared exponent list for offline quantization
     shp = tensor.shape
     #print ("shape1:", shp[1], " opt_exp_list:", len(opt_exp_list))
-    
+
     if (chnl_group == -1):
         chnl_group = shp[1]
     number_of_blocks = math.ceil(shp[1]/chnl_group)
@@ -35,7 +35,7 @@ def transform_fc_online(tensor, exponent, mantissa, chnl_group):
     if shp[1] % chnl_group == 0:
         # shp[1] is divisible by block size
         # Therefore just one tensor will be created
-        tensor = bfp_quantize(tensor, exponent, mantissa, quant_dim=len(tensor.shape)-1)
+        tensor = bfp_quantize(tensor, exponent, mantissa, quant_dim=len(tf.shape(tensor))-1)
     else:
         raise ValueError("Channel is not divisible by channel group while bfp quantizeing the FC")
 
@@ -59,7 +59,7 @@ def transform_fc_offline(tensor, exponent, mantissa, opt_exp_list):
         # Therefore just one tensor will be created
         tensor = tf.reshape(tensor, (shp[0], number_of_blocks, block_size))
         opt_exp_list = opt_exp_list.unsqueeze(0) ##### Need Unit test
-        tensor = to_exponent_mantissa_width(tensor, opt_exp_list, mantissa, quant_dim=len(tensor.shape)-1)
+        tensor = to_exponent_mantissa_width(tensor, opt_exp_list, mantissa, quant_dim=len(tf.shape(tensor))-1)
         tensor = tf.reshape(tensor, shp)
     else:
         raise ValueError("Channel is not divisible by channel group while bfp quantizeing the FC")
