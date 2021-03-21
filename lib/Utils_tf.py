@@ -66,7 +66,8 @@ def to_exponent_mantissa_width(array, maxexp, MANTISSA_WIDTH, quant_dim):
     # Half LSB rounding:
     array = tf.cast(array, dtype = tf.float32)
     # print(array[0, :, 0, 0]) # Uncomment to print integer values
-    array = array/first_mant_w
+    array = tf.cast((array/first_mant_w), dtype = tf.int32)
+    
 
     # Apply clamp
     max_clamp = ((1-(1/2)**(MANTISSA_WIDTH-2))/(1-(1/2))) * tf.math.pow(twos, maxexp)
@@ -76,7 +77,8 @@ def to_exponent_mantissa_width(array, maxexp, MANTISSA_WIDTH, quant_dim):
 
     min_clamp = -max_clamp
     array = tf.math.maximum(array, min_clamp)
-
+    array = tf.cast(array, dtype = tf.int8)
+    
     return array
 #
 # def smooth_hist(array, eps=0.0001):
