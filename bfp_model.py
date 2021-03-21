@@ -8,7 +8,7 @@ import numpy as np
 from bfp.lib.Utils_tf import bfp_quantize
 
 MANTISSA_WIDTH = 8
-EXPONENT_WIDTH = 5
+EXPONENT_WIDTH = 10
 
 #Increment this to make every layer have a different name
 layer_name = 0
