@@ -27,7 +27,7 @@ def find_exponent(array, EXPONENT_WIDTH):
     MAX = 2**(EXPONENT_WIDTH-1)-1
     MIN = -2**(EXPONENT_WIDTH-1)
     absolute = tf.math.abs(array)
-    value_log = np.log2(absolute)
+    value_log = tf.math.log(absolute) / tf.math.log(2.0)
     value_log = tf.clip_by_value(value_log, MIN, MAX)
     v_exponent = tf.math.floor(value_log)
     return v_exponent
@@ -52,13 +52,15 @@ def find_min_exponent(array, quant_dim):
 def to_exponent_mantissa_width(array, maxexp, MANTISSA_WIDTH, quant_dim):
     # This receives an array of shape:
     # [number_of_blocks, channel, bs_size, h, w]
-    shp = array.shape
-    maxexp = maxexp.tf.expand_dims(quant_dim)
+    shp = tf.shape(array)
+    maxexp = tf.expand_dims(maxexp, quant_dim)
     # NOTE THAT THIS -2 IS BECAUSE OF THE LEADING 1 AND THE FACT THAT THIS SHOULD BE IN 2s COMPLEMENT
     # Make the exponent_needed has the same shape with array
     exponent_needed = (MANTISSA_WIDTH-maxexp-2)*tf.ones(shp)
     #print (exponent_needed)
-    first_mant_w = math.pow(2, exponent_needed)
+
+    twos = 2 * tf.ones(shp)
+    first_mant_w = tf.math.pow(twos, exponent_needed)
     array = array*first_mant_w
     #print (array)
     # Half LSB rounding:
@@ -67,7 +69,7 @@ def to_exponent_mantissa_width(array, maxexp, MANTISSA_WIDTH, quant_dim):
     array = array/first_mant_w
 
     # Apply clamp
-    max_clamp = ((1-(1/2)**(MANTISSA_WIDTH-2))/(1-(1/2))) * math.pow(2, maxexp)
+    max_clamp = ((1-(1/2)**(MANTISSA_WIDTH-2))/(1-(1/2))) * tf.math.pow(twos, maxexp)
     max_clamp = max_clamp * tf.ones(shp)
     #print ("clamped:", (array > max_clamp).sum(), "shape:", array.shape)
     array = tf.math.minimum(array, max_clamp)
