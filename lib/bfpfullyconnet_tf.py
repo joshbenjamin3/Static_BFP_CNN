@@ -55,7 +55,7 @@ def transform_fc_offline(tensor, exponent, mantissa, opt_exp_list):
         # shp[1] is divisible by block size
         # Therefore just one tensor will be created
         tensor = tf.reshape(tensor, (shp[0], number_of_blocks, block_size))
-        opt_exp_list = opt_exp_list.unsqueeze(0) ##### Need Unit test
+        opt_exp_list = tf.expand_dims(opt_exp_list, 0) ##### Need Unit test
         tensor = to_exponent_mantissa_width(tensor, opt_exp_list, mantissa, quant_dim=len(tf.shape(tensor))-1)
         tensor = tf.reshape(tensor, shp)
     else:
