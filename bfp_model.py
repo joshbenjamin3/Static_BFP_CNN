@@ -73,7 +73,7 @@ def PUNET(input, instance_norm=False, instance_norm_level_1=False, num_maps_base
         conv_l0 = _conv_tranpose_layer(conv_l1_d12, num_maps_base//4, 3, 2)        # 128 -> 256
         conv_l0_out = _conv_layer(conv_l0, 3, 3, 1, relu=False, instance_norm=False)
 
-        output_l0 = tf.nn.tanh(tf.cast(conv_l0_out, dtype = tf.float32) * 0.58 + 0.5
+        output_l0 = tf.nn.tanh(tf.cast(conv_l0_out, dtype = tf.float32)) * 0.58 + 0.5
         
     output_l0 = tf.identity(output_l0, name='output_l0')
 
