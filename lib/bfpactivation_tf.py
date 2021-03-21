@@ -115,7 +115,7 @@ def transform_activation_offline(tensor, exponent, mantissa, opt_exp_list, is_3d
         if number_of_blocks == 1:
             # This means that the depth is less than the block size, so just one tensor will be created
             tensor = tf.reshape(tensor, (shp[0], 1, shp[1]*shp[2]*shp[3]))
-            opt_exp_list = opt_exp_list.unsqueeze(0) ##### Need Unit test
+            opt_exp_list = tf.expand_dims(opt_exp_list, 0) ##### Need Unit test
             tensor = to_exponent_mantissa_width(tensor, opt_exp_list, mantissa, quant_dim=len(tf.shape(tensor))-1)
             tensor = tf.reshape(tensor, (shp[0], shp[1], shp[2], shp[3]))
             return tensor
@@ -127,9 +127,9 @@ def transform_activation_offline(tensor, exponent, mantissa, opt_exp_list, is_3d
             tensor2 = tensor[:, first_chnl : shp[1], :, :]
             t2_shp = tf.shape(tensor2)
             t1_exp_list = opt_exp_list[0:number_of_blocks-1]
-            t1_exp_list = t1_exp_list.unsqueeze(0)
+            t1_exp_list = tf.expand_dims(t1_exp_list, 0)
             t2_exp_list = opt_exp_list[number_of_blocks-1]
-            t2_exp_list = t2_exp_list.unsqueeze(0)
+            t2_exp_list = tf.expand_dims(t2_exp_list, 0)
 
             # Perform quantization
             tensor1 = tf.reshape(tensor1, (shp[0], number_of_blocks-1, chnl_group*shp[2]*shp[3]))
@@ -163,7 +163,7 @@ def transform_activation_offline_3d(tensor, exponent, mantissa, opt_exp_list):
         # shp[1] is divisible by block size
         # Therefore just one tensor will be created
         tensor = tf.reshape(tensor, (shp[0], number_of_blocks, chnl_group*shp[2]*shp[3]))
-        opt_exp_list = opt_exp_list.unsqueeze(0) ##### Need Unit test
+        opt_exp_list = tf.expand_dims(opt_exp_list, 0) ##### Need Unit test
         tensor = to_exponent_mantissa_width(tensor, opt_exp_list, mantissa, quant_dim=len(tf.shape(tensor))-1)
         tensor = tf.reshape(tensor, (shp[0], shp[1], shp[2], shp[3], shp[4]))
         return tensor
