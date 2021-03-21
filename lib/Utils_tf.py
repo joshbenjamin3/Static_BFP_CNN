@@ -1,4 +1,4 @@
-import math
+# import math
 import time
 import sys
 import logging
@@ -59,12 +59,12 @@ def to_exponent_mantissa_width(array, maxexp, MANTISSA_WIDTH, quant_dim):
     exponent_needed = (MANTISSA_WIDTH-maxexp-2)*tf.ones(shp)
     #print (exponent_needed)
 
-    twos = 2 * tf.ones(shp)
+    twos = 2.0 * tf.ones(shp)
     first_mant_w = tf.math.pow(twos, exponent_needed)
     array = array*first_mant_w
     #print (array)
     # Half LSB rounding:
-    array = tf.math.round(array)
+    array = tf.cast(array, dtype = tf.float32)
     # print(array[0, :, 0, 0]) # Uncomment to print integer values
     array = array/first_mant_w
 
