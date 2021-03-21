@@ -1,3 +1,4 @@
+# Chang's code to restore model
 # output name in the model graph (may need to check it using tensorboard)
     saver = tf.compat.v1.train.import_meta_graph(input_checkpoint + '.meta', clear_devices=True)
 
