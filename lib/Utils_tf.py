@@ -72,6 +72,7 @@ def to_exponent_mantissa_width(array, maxexp, MANTISSA_WIDTH, quant_dim):
     # Apply clamp
     max_clamp = ((1-(1/2)**(MANTISSA_WIDTH-2))/(1-(1/2))) * tf.math.pow(twos, maxexp)
     max_clamp = max_clamp * tf.ones(shp)
+    max_clamp = tf.cast(max_clamp, dtype = tf.int32)
     #print ("clamped:", (array > max_clamp).sum(), "shape:", array.shape)
     array = tf.math.minimum(array, max_clamp)
 
