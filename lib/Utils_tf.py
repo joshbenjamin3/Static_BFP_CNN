@@ -88,7 +88,7 @@ def smooth_hist(array, eps=0.0001):
     n_nonzeros = tf.size(array) - n_zeros
     if (n_nonzeros.item() == 0):
         raise ValueError("All the values are zeros, the array shape is:", array)
-    eps1 = eps * tf.reduce_sum(tf.to_float(n_zeros)) / tf.reduce_sum(tf.to_float(n_nonzero)) # tf.item
+    eps1 = eps * tf.gather(tf.to_float(n_zeros), 0) / tf.gather(tf.to_float(n_nonzero), 0) # tf.item
     #print("eps1:", eps1)
     array = tf.to_float(array)
     array += eps * is_zeros + (-eps1) * is_nonzeros
@@ -116,7 +116,7 @@ def find_exp_KL_act(array, MANTISSA_WIDTH, EXPONENT_WIDTH, group=1, eps=0.0001, 
         max_exp = find_max_exponent(max_exp, quant_dim=0)
         opt_exp = tf.identity(max_exp)
         # Unsqeeze for quantization use
-        us_max_exp = max_exp.unsqueeze(0)
+        us_max_exp = tf.expand_dims(max_exp, 0)
         # Compute the histogram of original internal features
         orig_hist = []
         orig_max = []
@@ -125,9 +125,9 @@ def find_exp_KL_act(array, MANTISSA_WIDTH, EXPONENT_WIDTH, group=1, eps=0.0001, 
         min_kl_div = []
         #print("bins factor:", bins_factor)
         for i in range(number_of_blocks):
-            flat_array = torch.flatten(array[:, i, :].cpu())
-            float_max = tf.reduce_max(flat_array, 0)[0].item()
-            float_min = tf.reduce_min(flat_array, 0)[0].item()
+            flat_array = torch.flatten(array[:, i, :].cpu()) #tf.layers
+            float_max = tf.gather(tf.reduce_max(flat_array, 0)[0], 0)
+            float_min = tf.gather(tf.reduce_min(flat_array, 0)[0], 0)
             #print ("orignal max", float_max, "original min", float_min)
             target_max_int = (int)(math.ceil(float_max))
             target_min_int = (int)(math.floor(float_min))
@@ -152,12 +152,13 @@ def find_exp_KL_act(array, MANTISSA_WIDTH, EXPONENT_WIDTH, group=1, eps=0.0001, 
             num_bins = 1 + (int)((target_max_int - target_min_int)/float_interval)
 
             #num_bins = 1 + (int)((target_max_int - target_min_int)/(2/(2**(MANTISSA_WIDTH-bins_factor)))) #8-2 for resnet, 8-5 for inceptionv4 8-5 for vgg16
-            target_hist = torch.histc(flat_array, bins=num_bins, min=target_min_int, max=target_max_int)
+            target_hist = tf.histogram_fixed_width(flat_array, [target_min_int, target_max_int], nbins=num_bins)
+
             #print ("flat array", flat_array.shape)
             # Smoth the target histogram
             target_hist = smooth_hist(target_hist, eps)
             # Nomalize the target histogram
-            target_hist = target_hist/target_hist.sum()
+            target_hist = target_hist/tf.math.reduce_sum(target_hist)
             # Add information into list
             orig_hist.append(target_hist)
             orig_max.append(target_max_int)
@@ -171,23 +172,22 @@ def find_exp_KL_act(array, MANTISSA_WIDTH, EXPONENT_WIDTH, group=1, eps=0.0001, 
                                                         quant_dim=len(array.shape)-1)
             for j in range(number_of_blocks):
                 flat_qarray = torch.flatten(quantized_array[:, j, :].cpu())
-                if (((torch.max(flat_qarray, 0))[0].item() < orig_min[j])):
+                if (((tf.reduce_max(flat_qarray, 0))[0].item() < orig_min[j])):
                     continue
-                quantized_hist = torch.histc(flat_qarray, bins=orig_num_bins[j],
-                                            min=orig_min[j], max=orig_max[j])
+                quantized_hist = tf.histogram_fixed_width(flat_qarray, [orig_min[j], orig_max[j]], nbins=orig_num_bins[j])
                 # Smoth the quantized histogram
                 quantized_hist = smooth_hist(quantized_hist, eps)
                 # Log-Nomalize the quantized histogram
-                quantized_hist = quantized_hist/quantized_hist.sum()
-                quantized_hist = torch.log(quantized_hist)
+                quantized_hist = quantized_hist/tf.reduce_sum(quantized_hist)
+                quantized_hist = tf.math.log(quantized_hist)
                 # Calculate the KL-Divergence
                 kl_div = F.kl_div(quantized_hist, orig_hist[j])
-                if (min_kl_div[j] > kl_div.item()):
+                if (min_kl_div[j] > tf.gather(kl_div, 0)):
                     opt_exp[j] = (max_exp[j]-i)
-                    min_kl_div[j] = kl_div.item()
+                    min_kl_div[j] = tf.gather(kl_div, 0)
     else:
         raise ValueError("Channel is not divisible by group  while determining the opt exponent list the separated activation")
-    num_nequal = (max_exp != opt_exp).sum()
+    num_nequal = tf.reduce_sum(max_exp != opt_exp)
     logging.debug("After minimizing the KL divergence, %d / %d shared act exponents are improved" % (num_nequal.item(), opt_exp.numel()))
     opt_exp = opt_exp.int().cpu().data.tolist()
     opt_exp = np.repeat(opt_exp, group)
