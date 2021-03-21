@@ -10,6 +10,17 @@ import tensorflow as tf
 
 writer = SummaryWriter("./tensorboard/weight_quant_comp")
 
+def bfp_quantize(tensor, EXPONENT_WIDTH, MANTISSA_WIDTH, quant_dim):
+    # Quantize the tensor along quant_dim as Block Floating Point
+    # For activation with shape [batch, channel, height, width]:
+    #       quantized activation has shape [batch, num_channel_block, data]
+    # For weight with shape []:
+    #       quantized weight has shape [batch, num_filter_block, weight]
+    v_exponent = find_exponent(tensor, EXPONENT_WIDTH)
+    max_exponent = find_max_exponent(v_exponent, quant_dim)
+    quantized_tensor = to_exponent_mantissa_width(tensor, max_exponent, MANTISSA_WIDTH, quant_dim)
+    return quantized_tensor
+
 def find_exponent(array, EXPONENT_WIDTH):
     # This receives an array of shape:
     # [number_of_blocks, channel, bs_size, h, w]
@@ -66,13 +77,20 @@ def to_exponent_mantissa_width(array, maxexp, MANTISSA_WIDTH, quant_dim):
 
     return array
 
-def bfp_quantize(tensor, EXPONENT_WIDTH, MANTISSA_WIDTH, quant_dim):
-    # Quantize the tensor along quant_dim as Block Floating Point
-    # For activation with shape [batch, channel, height, width]:
-    #       quantized activation has shape [batch, num_channel_block, data]
-    # For weight with shape []:
-    #       quantized weight has shape [batch, num_filter_block, weight]
-    v_exponent = find_exponent(tensor, EXPONENT_WIDTH)
-    max_exponent = find_max_exponent(v_exponent, quant_dim)
-    quantized_tensor = to_exponent_mantissa_width(tensor, max_exponent, MANTISSA_WIDTH, quant_dim)
-    return quantized_tensor
+def smooth_hist(array, eps=0.0001):
+    # This implementation is refer to the mxnet quantization document:
+    # https://github.com/apache/incubator-mxnet/blob/e17b7e2947b3848ee1b41f8ec8abafe0d1c319ad/python/mxnet/contrib/quantization.py#L241
+    #print ("before smooth", array)
+    # array is a tensor
+    is_zeros = tf.to_float(array == 0)
+    is_nonzeros = tf.to_float(array != 0)
+    n_zeros = tf.reduce_sum(is_zeros)
+    n_nonzeros = tf.size(array) - n_zeros
+    if (n_nonzeros.item() == 0):
+        raise ValueError("All the values are zeros, the array shape is:", array)
+    eps1 = eps * tf.to_float(n_zeros).item() / tf.to_float(n_nonzero).item()
+    #print("eps1:", eps1)
+    array = tf.to_float(array)
+    array += eps * is_zeros + (-eps1) * is_nonzeros
+    assert tf.reduce_sum(array <= 0) == 0, "Some negtive values are generated during smoothing the histogram"
+    return array
